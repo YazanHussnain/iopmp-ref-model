@@ -1,5 +1,8 @@
 # RISC-V IOPMP Reference Model
 
+**Repositories:** [GitLab](https://gitlab.com/yazanhussnain/iopmp-ref-model) (canonical) ·
+[GitHub mirror](https://github.com/YazanHussnain/iopmp-ref-model)
+
 A C reference model of the **RISC-V Input/Output Physical Memory Protection (IOPMP)** unit:
 a software implementation of the IOPMP transaction-checking pipeline, register file,
 configuration-protection locks, and the optional extensions and implementation models
