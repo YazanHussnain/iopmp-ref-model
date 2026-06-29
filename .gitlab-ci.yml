@@ -1,0 +1,40 @@
+# GitLab CI/CD for the RISC-V IOPMP reference model.
+# Builds the model + tests, then runs the full CTest suite (all 18 feature
+# suites) with a JUnit report surfaced in the GitLab MR/pipeline UI.
+
+stages:
+  - build
+  - test
+
+default:
+  image: ubuntu:24.04
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y -qq build-essential cmake
+    - cmake --version
+
+# ── Build the project (warning-clean under -Werror) ──────────────────
+build:
+  stage: build
+  script:
+    - cmake -S . -B build
+    - cmake --build build --parallel
+  artifacts:
+    paths:
+      - build/
+    expire_in: 1 hour
+
+# ── Run every test via CTest ─────────────────────────────────────────
+test:
+  stage: test
+  needs: ["build"]
+  script:
+    - cd build
+    - ctest --output-on-failure --output-junit ctest-report.xml
+  artifacts:
+    when: always
+    paths:
+      - build/ctest-report.xml
+    reports:
+      junit: build/ctest-report.xml
+    expire_in: 1 week
