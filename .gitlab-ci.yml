@@ -38,3 +38,34 @@ test:
     reports:
       junit: build/ctest-report.xml
     expire_in: 1 week
+
+# ── Code coverage (instrumented build + gcovr) ───────────────────────
+# Coverage uses its own instrumented build (the `build` artifact is not).
+# The job's `coverage` regex captures the overall line rate for the GitLab
+# UI; the Cobertura report annotates changed lines in merge requests.
+coverage:
+  stage: test
+  needs: []
+  before_script:
+    - apt-get update -qq
+    - apt-get install -y -qq build-essential cmake gcovr
+  script:
+    - cmake -S . -B cov-build -DIOPMP_COVERAGE=ON
+    - cmake --build cov-build --parallel
+    - (cd cov-build && ctest --output-on-failure)
+    - mkdir -p coverage
+    - >
+      gcovr --root . --filter 'libiopmp/' --filter 'libsystem/'
+      --print-summary
+      --xml-pretty -o coverage/cobertura.xml
+      --html-details coverage/index.html
+  coverage: '/^lines:\s*\d+\.\d+\%/'
+  artifacts:
+    when: always
+    paths:
+      - coverage/
+    reports:
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage/cobertura.xml
+    expire_in: 1 week
