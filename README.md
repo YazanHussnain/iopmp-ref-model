@@ -215,4 +215,4 @@ workflow, PR and issue templates, and the policy on AI-assisted contributions
 
 ## License
 
-See the repository `LICENSE` file (add one if not yet present).
+Licensed under the **Apache License, Version 2.0**. See the [LICENSE](LICENSE) file.
