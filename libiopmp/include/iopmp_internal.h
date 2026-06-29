@@ -93,7 +93,6 @@ bool LockEntryIsLocked(const IopmpState_t *iopmp, uint32_t entryIdx);
  */
 bool StallHandleWrite(IopmpState_t *iopmp, uint32_t byteOffset, uint32_t value);
 
-void StallRecomputeRridMask(IopmpState_t *iopmp);
 bool StallRridIsStalled(const IopmpState_t *iopmp, uint16_t rrid);
 
 #endif /* IOPMP_INTERNAL_H */

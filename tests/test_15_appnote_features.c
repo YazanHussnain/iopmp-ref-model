@@ -328,6 +328,47 @@ static void TestAppn029to032_RridTransl(void)
     PASS("IOPMP-APPN-029..032 rrid_transl");
 }
 
+/* Translated RRID landing out of range is reported as Unknown RRID (§A.7.2). */
+static void TestAppnCov_TranslOutOfRange(void)
+{
+    IopmpState_t iopmp;
+    IopmpParams_t p = Base(4, 4, 1);
+    p.rridTranslEn = true; p.rridTranslProg = true;
+    assert(IopmpInit(&iopmp, &p) == IOPMP_OK);
+    Enable(&iopmp); Mdcfg(&iopmp, 0, 4);
+    Na4(&iopmp, 0, 0x1000ULL, ENTRY_CFG_R_BIT);
+    /* RRID0 translates to 99, which is >= rrid_num -> UNKNOWN_RRID. */
+    IopmpWriteReg(&iopmp, REG_RRIDTRANSL_BASE, 99U);
+    ASSERT_ETYPE(IopmpCheckAccess(&iopmp, 0, 0x1000ULL, 4, IOPMP_TXN_READ),
+                 IOPMP_ETYPE_UNKNOWN_RRID);
+    IopmpDestroy(&iopmp);
+    PASS("IOPMP-APPN-cov translated RRID out of range");
+}
+
+/* MD-indexed (fmt2) SRCMD_PERMH grants read/write/AMO for a high RRID (16-31)
+ * even when the matched entry denies — exercises the high-RRID permission path. */
+static void TestAppnCov_MdIndexedHighRrid(void)
+{
+    IopmpState_t iopmp;
+    IopmpParams_t p = Base(24, 4, 2);
+    p.srcmdFmt = 2U;
+    assert(IopmpInit(&iopmp, &p) == IOPMP_OK);
+    Enable(&iopmp); Mdcfg(&iopmp, 0, 2);
+    /* Entry grants nothing; only SRCMD_PERMH can permit (OR semantics). */
+    Na4(&iopmp, 0, 0x1000ULL, 0U);
+    uint32_t permhOff = REG_SRCMD_BASE + 0U * REG_SRCMD_STRIDE + REG_SRCMD_ENH_OFF;
+    /* RRID 20 -> PERMH bit 2*(20-16)=8 read, 9 write. */
+    IopmpWriteReg(&iopmp, permhOff, (1U << 8) | (1U << 9));
+    ASSERT_LEGAL(IopmpCheckAccess(&iopmp, 20, 0x1000ULL, 4, IOPMP_TXN_READ));
+    ASSERT_LEGAL(IopmpCheckAccess(&iopmp, 20, 0x1000ULL, 4, IOPMP_TXN_WRITE));
+    ASSERT_LEGAL(IopmpCheckAccess(&iopmp, 20, 0x1000ULL, 4, IOPMP_TXN_AMO));
+    /* RRID 21 has no PERMH bits -> not associated -> NO_RULE. */
+    ASSERT_ETYPE(IopmpCheckAccess(&iopmp, 21, 0x1000ULL, 4, IOPMP_TXN_READ),
+                 IOPMP_ETYPE_NO_RULE);
+    IopmpDestroy(&iopmp);
+    PASS("IOPMP-APPN-cov MD-indexed high-RRID PERMH permits");
+}
+
 /* ───────────────────────────────────────────────────────────────────
  * Cross-combinations
  * ─────────────────────────────────────────────────────────────────── */
@@ -422,6 +463,8 @@ int main(void)
     TestAppn023_SourceEnforcement();
     TestAppn024to028_KEntry();
     TestAppn029to032_RridTransl();
+    TestAppnCov_TranslOutOfRange();
+    TestAppnCov_MdIndexedHighRrid();
 
     TestAppnX01_NoWNoX();
     TestAppnX02_XinrNoX();

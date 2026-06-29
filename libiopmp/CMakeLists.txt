@@ -10,6 +10,5 @@ add_library(iopmp STATIC
     src/iopmp_error.c
     src/iopmp_lock.c
     src/iopmp_stall.c
-    src/iopmp_ext.c
 )
 target_include_directories(iopmp PUBLIC include)

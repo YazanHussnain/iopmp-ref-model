@@ -691,6 +691,37 @@ static void TestErr031_ErrUser(void)
     PASS("IOPMP-ERR-031 ERR_USER read/write storage");
 }
 
+/* IOPMP-ERR-032 - IopmpGetErrInfo()/IopmpClearError() decode the capture. */
+static void TestErr032_GetErrInfoApi(void)
+{
+    IopmpState_t iopmp;
+    IopmpParams_t params = MakeParams(4, 8, 1);
+    params.addrhEn = true;
+    assert(IopmpInit(&iopmp, &params) == IOPMP_OK);
+    EnableIopmp(&iopmp);
+    IopmpWriteReg(&iopmp, REG_MDCFG_BASE, 8U);
+    IopmpWriteReg(&iopmp, REG_SRCMD_BASE + 2U * REG_SRCMD_STRIDE + REG_SRCMD_EN_OFF, (1U << 1));
+    /* Entry 3 denies write; RRID 2 triggers it. */
+    SetNa4(&iopmp, 3, 0x2000ULL, ENTRY_CFG_R_BIT);
+    IopmpCheckAccess(&iopmp, 2, 0x2000ULL, 4, IOPMP_TXN_WRITE);
+
+    IopmpErrInfo_t info = IopmpGetErrInfo(&iopmp);
+    assert(info.valid);
+    assert(info.ttype == 2U);                              /* write */
+    assert(info.etype == (uint8_t)IOPMP_ETYPE_ILLEGAL_WRITE);
+    assert(info.rrid == 2U);
+    assert(info.entryIdx == 3U);
+    assert(info.reqAddr == 0x2000ULL);                     /* byte address rebuilt from word */
+
+    /* IopmpClearError() re-arms the recorder. */
+    IopmpClearError(&iopmp);
+    assert(!IopmpGetErrInfo(&iopmp).valid);
+    assert((IopmpReadReg(&iopmp, REG_ERR_INFO) & ERR_INFO_V_BIT) == 0U);
+
+    IopmpDestroy(&iopmp);
+    PASS("IOPMP-ERR-032 IopmpGetErrInfo / IopmpClearError");
+}
+
 /* ───────────────────────────────────────────────────────────────────
  * Cross-combinations (file-local)
  * ─────────────────────────────────────────────────────────────────── */
@@ -872,6 +903,7 @@ int main(void)
     TestErr029_IeRsWarl();
     TestErr030_ReservedZero();
     TestErr031_ErrUser();
+    TestErr032_GetErrInfoApi();
 
     /* Cross-combinations */
     TestErrX01_LockedImmutable();

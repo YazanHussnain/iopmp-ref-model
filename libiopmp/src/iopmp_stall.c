@@ -8,10 +8,9 @@
  * entries belonging to a domain that is currently in use.
  *
  * How it works:
- *   1. Software writes MDSTALL/MDSTALLH to mark certain MDs as stalled.
- *   2. StallRecomputeRridMask walks every RRID, checks its MD membership
- *      bitmap (from SRCMD_EN/SRCMD_ENH), and sets rridStalled[rrid] = true
- *      whenever at least one of the RRID's MDs is stalled.
+ *   1. Software writes MDSTALLH then MDSTALL to select MDs and commit.
+ *   2. On the MDSTALL write, StallSnapshot latches each RRID's stall flag from
+ *      the spec formula rrid_stall[s] = exempt XOR (SRCMD(s).md & selected).
  *   3. IopmpCheckAccess checks StallRridIsStalled before doing the priority
  *      walk; stalled transactions are returned to the caller as
  *      {legal=false, stalled=true} so the bus can retry later.
@@ -103,16 +102,6 @@ bool StallHandleWrite(IopmpState_t *iopmp, uint32_t byteOffset, uint32_t value)
     iopmp->regs[REG_MDSTALL / 4U] =
         (uint32_t)((selected & 0x7FFFFFFFULL) << 1U);
     return true;
-}
-
-void StallRecomputeRridMask(IopmpState_t *iopmp)
-{
-    /*
-     * Retained for API compatibility. rrid_stall is now latched as a snapshot
-     * at MDSTALL write time (StallSnapshot); there is nothing to recompute from
-     * register state alone, since the exempt polarity is not retained.
-     */
-    (void)iopmp;
 }
 
 bool StallRridIsStalled(const IopmpState_t *iopmp, uint16_t rrid)

@@ -109,6 +109,8 @@ static void TestEntry001_OffNotCandidate(void)
 
     SetEntryRaw(&iopmp, 0, (uint32_t)(0x1000ULL >> 2U), 0x00U);  /* a=OFF */
     assert(!EntryIsActive(&iopmp, 0));
+    assert(EntryGetBase(&iopmp, 0) == 0ULL);                     /* OFF: no region */
+    assert(EntryGetSize(&iopmp, 0) == 0ULL);
 
     Wire1Md(&iopmp, 4);
     TxnResult_t r = IopmpCheckAccess(&iopmp, 0, 0x1000ULL, 4, IOPMP_TXN_READ);
